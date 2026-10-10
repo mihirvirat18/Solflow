@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f6f8f5">
+    <meta name="description" content="Manage freelance projects, milestones, invoices, and payment records.">
+    <title>SolPay — Freelance workspace</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar">
+        <a class="brand" href="#" aria-label="SolPay home" data-page="overview">
+          <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+          <span>solpay<span class="brand-period">.</span></span>
+        </a>
+
+        <div class="workspace-switcher">
+          <div class="avatar avatar-green" data-account-avatar></div>
+          <span class="workspace-copy"><strong>Mihir Gupta</strong><small>Freelancer workspace</small></span>
+          <span class="chevron">⌄</span>
+        </div>
+
+        <p class="nav-label">WORKSPACE</p>
+        <nav class="main-nav" aria-label="Main navigation">
+          <button class="nav-item active" data-page="overview"><span class="nav-icon">⌂</span>Overview</button>
+          <button class="nav-item" data-page="projects"><span class="nav-icon">▤</span>Projects<span class="nav-count" id="project-count">0</span></button>
+          <button class="nav-item" data-page="clients"><span class="nav-icon">◎</span>Clients<span class="nav-count" id="client-count">0</span></button>
+          <button class="nav-item" data-page="invoices"><span class="nav-icon">▧</span>Invoices</button>
+          <button class="nav-item" data-page="activity"><span class="nav-icon">◷</span>Activity</button>
+        </nav>
+
+        <div class="sidebar-bottom">
+          <div class="compliance-note">
+            <span class="shield-icon">✓</span>
+            <strong>Payments, the clear way.</strong>
+            <p>Create Devnet SOL requests that pay directly into your connected wallet.</p>
+            <a href="#payment-note">How payments work <span>↗</span></a>
+          </div>
+          <button class="profile-button">
+            <span class="avatar avatar-dark" data-account-avatar></span>
+            <span class="workspace-copy"><strong>Mihir Gupta</strong><small>Personal account</small></span>
+            <span class="more-icon">···</span>
+          </button>
+        </div>
+      </aside>
+
+      <main class="main-area">
+        <header class="topbar">
+          <button class="mobile-menu icon-button" id="mobile-menu" aria-label="Open navigation">☰</button>
+          <div class="breadcrumbs"><span>Workspace</span><span class="crumb-slash">/</span><strong id="breadcrumb-page">Overview</strong></div>
+          <div class="topbar-actions">
+            <div class="today-label"><span class="online-dot"></span> Your workspace is up to date</div>
+            <button class="button button-quiet button-small" id="wallet-button" type="button">Connect Phantom</button>
+            <button class="icon-button notification-button" aria-label="Notifications">♧<span class="notification-dot"></span></button>
+            <span class="avatar avatar-green top-avatar" data-account-avatar></span>
+          </div>
+        </header>
+
+        <div class="page-content">
+          <section class="page-heading" id="page-heading">
+            <div>
+              <p class="eyebrow" id="heading-eyebrow">THURSDAY, OCTOBER 9, 2026</p>
+              <h1 id="heading-title">Good afternoon, Mihir <span class="wave">✳</span></h1>
+              <p class="heading-subtitle" id="heading-subtitle">Here’s what’s happening with your freelance work.</p>
+            </div>
+            <button class="button button-primary" id="new-project-button"><span class="plus">+</span> New project</button>
+          </section>
+
+          <div id="view-container"></div>
+
+          <footer class="page-footer" id="payment-note">
+            <span><strong>SolPay is your project workspace.</strong> We don’t hold or move your money.</span>
+            <a href="#payment-note">Devnet confirmation applies to test SOL only <span>↗</span></a>
+          </footer>
+        </div>
+      </main>
+    </div>
+
+    <div class="modal-backdrop" id="modal-backdrop" hidden>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">PROJECT SETUP</p>
+            <h2 id="modal-title">Start a new project</h2>
+            <p class="modal-description">Set expectations before the work begins.</p>
+          </div>
+          <button class="icon-button close-modal" id="close-modal" aria-label="Close dialog">×</button>
+        </div>
+        <form id="project-form">
+          <label class="field-label" for="project-name">Project name</label>
+          <input class="text-input" id="project-name" name="name" placeholder="e.g. Website redesign" maxlength="70" required>
+
+          <label class="field-label" for="client-name">Client name</label>
+          <input class="text-input" id="client-name" name="client" placeholder="e.g. Northstar Studio" maxlength="60" required>
+
+          <div class="form-row">
+            <div>
+              <label class="field-label" for="project-amount">Agreed amount</label>
+              <div class="amount-input"><span>USD</span><input id="project-amount" name="amount" type="number" min="1" step="0.01" placeholder="0.00" required></div>
+            </div>
+            <div>
+              <label class="field-label" for="project-due">Target date</label>
+              <input class="text-input" id="project-due" name="due" type="date" required>
+            </div>
+          </div>
+
+          <label class="field-label" for="milestone-name">First milestone</label>
+          <input class="text-input" id="milestone-name" name="milestone" placeholder="e.g. Initial concepts" maxlength="80" required>
+          <p class="field-hint">You can add and manage additional milestones from the project page.</p>
+
+          <div class="form-note"><span>ⓘ</span><p>This creates a project record only. It does not reserve, hold, or transfer funds.</p></div>
+          <div class="modal-actions">
+            <button type="button" class="button button-quiet" id="cancel-modal">Cancel</button>
+            <button type="submit" class="button button-primary">Create project <span>→</span></button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="invoice-modal-backdrop" hidden>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="invoice-modal-title">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">PAYMENT RECORD</p>
+            <h2 id="invoice-modal-title">Update invoice</h2>
+            <p class="modal-description" id="invoice-modal-description"></p>
+          </div>
+          <button class="icon-button" id="close-invoice-modal" aria-label="Close dialog">×</button>
+        </div>
+        <form id="invoice-update-form">
+          <span class="field-label">How was payment confirmed?</span>
+          <div class="payment-options">
+            <label class="radio-card"><input type="radio" name="verification" value="provider" required>
+              <span><strong>Confirmed by my provider</strong><small>I checked with my licensed bank or payment provider. SolPay does not verify transfers.</small></span>
+            </label>
+            <label class="radio-card"><input type="radio" name="verification" value="client">
+              <span><strong>Client says they sent it</strong><small>Record this as processing and unverified until my provider confirms receipt.</small></span>
+            </label>
+          </div>
+          <label class="provider-confirmation" id="provider-confirmation"><input type="checkbox" id="provider-checked">
+            <span>I independently verified the received payment with my provider.</span>
+          </label>
+          <div class="form-note"><span>ⓘ</span><p>This updates your workspace record only. SolPay does not receive, hold, or move funds.</p></div>
+          <div class="modal-actions">
+            <button type="button" class="button button-quiet" id="cancel-invoice-modal">Cancel</button>
+            <button type="submit" class="button button-primary">Save record <span>→</span></button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="sol-payment-modal-backdrop" hidden>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="sol-payment-title">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">SOLANA DEVNET</p>
+            <h2 id="sol-payment-title">Request SOL payment</h2>
+            <p class="modal-description" id="sol-payment-description"></p>
+          </div>
+          <button class="icon-button" id="close-sol-payment-modal" type="button" aria-label="Close dialog">×</button>
+        </div>
+        <form id="sol-payment-form">
+          <label class="field-label" for="sol-payment-amount">Amount in SOL</label>
+          <input class="text-input" id="sol-payment-amount" name="amount" type="number" min="0.000000001" step="0.000000001" placeholder="0.01" required>
+          <p class="field-hint">Enter up to 9 decimal places. This is a Devnet test payment and is separate from the USD invoice total.</p>
+          <div class="form-note"><span>ⓘ</span><p>The connected Phantom wallet is the recipient. Share the QR code or payment link with your client. SolPay never receives your private keys.</p></div>
+          <div id="sol-payment-request" class="sol-payment-request" hidden>
+            <div id="sol-payment-qr" class="sol-payment-qr" aria-label="Solana Pay QR code"></div>
+            <label class="field-label" for="sol-payment-uri">Solana Pay link</label>
+            <input class="text-input" id="sol-payment-uri" type="text" readonly>
+            <p class="field-hint" id="sol-payment-recipient"></p>
+            <div class="modal-actions sol-payment-actions">
+              <button type="button" class="button button-quiet" id="copy-sol-payment-link">Copy link</button>
+              <button type="button" class="button button-quiet" id="check-sol-payment">Check Devnet payment</button>
+            </div>
+            <p class="field-hint" id="sol-payment-status" role="status" aria-live="polite"></p>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="button button-quiet" id="cancel-sol-payment-modal">Close</button>
+            <button type="submit" class="button button-primary" id="create-sol-payment-request">Create payment request <span>→</span></button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="https://unpkg.com/@solana/web3.js@1.98.4/lib/index.iife.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
