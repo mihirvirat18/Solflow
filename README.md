@@ -1,8 +1,8 @@
-# SolPay
+# SolFlow
 
-SolPay is a lightweight freelance workspace for tracking projects, clients, milestones, invoices, and payment records. It can create Solana Pay requests and check for matching confirmed transfers on **Solana Devnet**.
+SolFlow is a lightweight freelance workspace for tracking projects, clients, milestones, invoices, and payment records. It can create Solana Pay requests and check for matching confirmed transfers on **Solana Devnet**.
 
-> SolPay is a project workspace, not a payment processor. It does not custody or move funds. Devnet SOL is for testing and has no real-world value.
+> SolFlow is a project workspace, not a payment processor. It does not custody or move funds. Devnet SOL is for testing and has no real-world value.
 
 ## Features
 
@@ -28,9 +28,11 @@ Phantom and a compatible Solana Pay wallet are needed for the wallet payment flo
 1. Connect Phantom in the app; the connected wallet is used as the request recipient.
 2. Open **Invoices**, select an unpaid invoice, and create a SOL payment request.
 3. Have the payer open the Solana Pay link or scan the QR code with a compatible wallet, then review and approve the transaction on Devnet.
-4. Return to the request and check the payment. Once a matching confirmed Devnet transfer is found, the invoice is marked paid in this browser.
+4. Return to the request and check the payment. The app requires a confirmed or finalized signature status, the request reference in the transaction, and an exact recipient and lamport amount match. It checks again before marking the invoice paid, and won’t reuse a transaction signature already recorded for another invoice.
 
-Creating a request does not itself send a transaction. The payer must approve it in their wallet. Invoice and project data are stored in the current browser and are not synchronized to a server.
+Requests expire after 24 hours. Expired requests cannot be verified; connect Phantom and create a replacement request. A late transfer to the expired request is not automatically accepted.
+
+Creating a request does not itself send a transaction. The payer must approve it in their wallet. Invoice and project data are stored in the current browser and are not synchronized to a server. This client-side Devnet check is a prototype, not authoritative verification for real customer payments.
 
 ## Technologies
 

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#f6f8f5">
     <meta name="description" content="Manage freelance projects, milestones, invoices, and payment records.">
-    <title>SolPay — Freelance workspace</title>
+    <title>SolFlow — Freelance workspace</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -14,9 +14,9 @@
   <body>
     <div class="app-shell">
       <aside class="sidebar" id="sidebar">
-        <a class="brand" href="#" aria-label="SolPay home" data-page="overview">
+        <a class="brand" href="#" aria-label="SolFlow home" data-page="overview">
           <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
-          <span>solpay<span class="brand-period">.</span></span>
+          <span>solflow<span class="brand-period">.</span></span>
         </a>
 
         <div class="workspace-switcher">
@@ -74,7 +74,7 @@
           <div id="view-container"></div>
 
           <footer class="page-footer" id="payment-note">
-            <span><strong>SolPay is your project workspace.</strong> We don’t hold or move your money.</span>
+            <span><strong>SolFlow is your project workspace.</strong> We don’t hold or move your money.</span>
             <a href="#payment-note">Devnet confirmation applies to test SOL only <span>↗</span></a>
           </footer>
         </div>
@@ -136,7 +136,7 @@
           <span class="field-label">How was payment confirmed?</span>
           <div class="payment-options">
             <label class="radio-card"><input type="radio" name="verification" value="provider" required>
-              <span><strong>Confirmed by my provider</strong><small>I checked with my licensed bank or payment provider. SolPay does not verify transfers.</small></span>
+              <span><strong>Confirmed by my provider</strong><small>I checked with my licensed bank or payment provider. SolFlow does not verify transfers.</small></span>
             </label>
             <label class="radio-card"><input type="radio" name="verification" value="client">
               <span><strong>Client says they sent it</strong><small>Record this as processing and unverified until my provider confirms receipt.</small></span>
@@ -145,7 +145,7 @@
           <label class="provider-confirmation" id="provider-confirmation"><input type="checkbox" id="provider-checked">
             <span>I independently verified the received payment with my provider.</span>
           </label>
-          <div class="form-note"><span>ⓘ</span><p>This updates your workspace record only. SolPay does not receive, hold, or move funds.</p></div>
+          <div class="form-note"><span>ⓘ</span><p>This updates your workspace record only. SolFlow does not receive, hold, or move funds.</p></div>
           <div class="modal-actions">
             <button type="button" class="button button-quiet" id="cancel-invoice-modal">Cancel</button>
             <button type="submit" class="button button-primary">Save record <span>→</span></button>
@@ -167,8 +167,8 @@
         <form id="sol-payment-form">
           <label class="field-label" for="sol-payment-amount">Amount in SOL</label>
           <input class="text-input" id="sol-payment-amount" name="amount" type="number" min="0.000000001" step="0.000000001" placeholder="0.01" required>
-          <p class="field-hint">Enter up to 9 decimal places. This is a Devnet test payment and is separate from the USD invoice total.</p>
-          <div class="form-note"><span>ⓘ</span><p>The connected Phantom wallet is the recipient. Share the QR code or payment link with your client. SolPay never receives your private keys.</p></div>
+          <p class="field-hint">Enter up to 9 decimal places. Requests expire after 24 hours. This Devnet test payment is separate from the USD invoice total.</p>
+          <div class="form-note"><span>ⓘ</span><p>The connected Phantom wallet is the recipient. Share the QR code or payment link with your client. SolFlow never receives your private keys.</p></div>
           <div id="sol-payment-request" class="sol-payment-request" hidden>
             <div id="sol-payment-qr" class="sol-payment-qr" aria-label="Solana Pay QR code"></div>
             <label class="field-label" for="sol-payment-uri">Solana Pay link</label>
@@ -177,6 +177,7 @@
             <div class="modal-actions sol-payment-actions">
               <button type="button" class="button button-quiet" id="copy-sol-payment-link">Copy link</button>
               <button type="button" class="button button-quiet" id="check-sol-payment">Check Devnet payment</button>
+              <button type="button" class="button button-quiet" id="replace-sol-payment-request" hidden>Create replacement request</button>
             </div>
             <p class="field-hint" id="sol-payment-status" role="status" aria-live="polite"></p>
           </div>
@@ -189,8 +190,8 @@
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="https://unpkg.com/@solana/web3.js@1.98.4/lib/index.iife.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/@solana/web3.js@1.98.4/lib/index.iife.min.js" integrity="sha384-I45YF+S0YGWIolUyTksLk9TNtTqaDgZg8e6T1OoBoJvvFmphqYNIPZw3Kl0TkZNN" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU" crossorigin="anonymous"></script>
     <script src="app.js"></script>
   </body>
 </html>

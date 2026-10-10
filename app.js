@@ -1,9 +1,10 @@
 (() => {
   "use strict";
 
-  const STORAGE_KEY = "solpay-nepal-workspace-v1";
+  const STORAGE_KEY = "solflow-nepal-workspace-v1";
   const SOLANA_DEVNET_RPC = "https://api.devnet.solana.com";
   const LAMPORTS_PER_SOL = 1_000_000_000;
+  const SOL_PAYMENT_REQUEST_TTL_MS = 24 * 60 * 60 * 1000;
   const today = new Date();
   const day = (offset) => {
     const date = new Date(today);
@@ -64,6 +65,7 @@
   let currentInvoiceId = null;
   let currentSolInvoiceId = null;
   let connectedWallet = null;
+  let checkingSolPayment = false;
   let toastTimer = null;
 
   const view = document.getElementById("view-container");
@@ -86,7 +88,7 @@
       }
       return parsed;
     } catch (error) {
-      console.error("Could not load saved SolPay workspace data.", error);
+      console.error("Could not load saved SolFlow workspace data.", error);
       return structuredClone(initialState);
     }
   }
@@ -95,7 +97,7 @@
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch (error) {
-      console.error("Could not save SolPay workspace data.", error);
+      console.error("Could not save SolFlow workspace data.", error);
       showToast("Could not save changes in this browser.");
     }
   }
@@ -222,11 +224,44 @@
     const params = new URLSearchParams({
       amount: payment.amount,
       reference: payment.reference,
-      label: "SolPay",
+      label: "SolFlow",
       message: `Invoice ${payment.invoiceId}`,
       cluster: "devnet"
     });
     return `solana:${payment.recipient}?${params.toString()}`;
+  }
+
+  function solPaymentRequestExpired(payment) {
+    const expiresAt = Date.parse(payment.expiresAt || "");
+    return !Number.isFinite(expiresAt) || expiresAt <= Date.now();
+  }
+
+  function transactionIncludesReference(transaction, reference) {
+    const accountKeys = transaction.transaction.message.accountKeys;
+    return Array.isArray(accountKeys) && accountKeys.some((accountKey) => {
+      const publicKey = accountKey.pubkey || accountKey;
+      return publicKey.toString() === reference;
+    });
+  }
+
+  function transactionHasMatchingTransfer(transaction, payment, expectedLamports) {
+    return transaction.transaction.message.instructions.some((instruction) => {
+      const info = instruction.parsed && instruction.parsed.info;
+      if (!instruction.parsed || instruction.program !== "system" || instruction.parsed.type !== "transfer" || !info) return false;
+      try {
+        return info.destination === payment.recipient && BigInt(String(info.lamports)) === expectedLamports;
+      } catch {
+        return false;
+      }
+    });
+  }
+
+  function isConfirmedSignatureStatus(status) {
+    return Boolean(status && !status.err && (status.confirmationStatus === "confirmed" || status.confirmationStatus === "finalized"));
+  }
+
+  function signatureAlreadyApplied(invoices, invoiceId, signature) {
+    return invoices.some((invoice) => invoice.id !== invoiceId && invoice.solanaSignature === signature);
   }
 
   function showSolPaymentRequest(invoice) {
@@ -242,7 +277,12 @@
     requestPanel.hidden = false;
     document.getElementById("sol-payment-uri").value = uri;
     document.getElementById("sol-payment-recipient").textContent = `Receiving wallet: ${payment.recipient}`;
-    status.textContent = "Waiting for a matching confirmed transfer on Solana Devnet.";
+    const expired = solPaymentRequestExpired(payment);
+    status.textContent = expired
+      ? "This payment request has expired. Create a replacement request before accepting payment."
+      : `Waiting for a matching confirmed Devnet transfer. Request expires ${new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(payment.expiresAt))}.`;
+    document.getElementById("replace-sol-payment-request").hidden = !expired;
+    document.getElementById("check-sol-payment").disabled = expired;
     const qr = document.getElementById("sol-payment-qr");
     qr.replaceChildren();
     if (typeof window.QRCode !== "function") {
@@ -393,7 +433,7 @@
             <div class="panel-header"><div><h2 class="panel-title">Recent invoices</h2><p class="panel-subtitle">Payment records, all in one place.</p></div><button class="text-button" data-page="invoices">View all</button></div>
             <div class="invoice-list">${invoices.length ? invoices.map(invoiceItem).join("") : '<div class="empty-state">Invoices you create will show here.</div>'}</div>
           </section>
-          <aside class="partner-note"><div class="partner-note-title"><span>✓</span> Payment clarity, built in</div><p>Devnet SOL requests send test tokens directly to your connected wallet. SolPay never holds funds; use your approved provider for live payments.</p></aside>
+          <aside class="partner-note"><div class="partner-note-title"><span>✓</span> Payment clarity, built in</div><p>Devnet SOL requests send test tokens directly to your connected wallet. SolFlow never holds funds; use your approved provider for live payments.</p></aside>
           <section class="panel">
             <div class="panel-header"><div><h2 class="panel-title">Recent activity</h2><p class="panel-subtitle">The latest project updates.</p></div><button class="text-button" data-page="activity">See all</button></div>
             <div class="activity-list">${state.activity.slice(0, 3).map(activityItem).join("") || '<div class="empty-state">Project updates will appear here.</div>'}</div>
@@ -440,7 +480,7 @@
     return `<div class="page-toolbar"><label class="search-box"><input class="search-input" id="client-search" type="search" placeholder="Search clients" aria-label="Search clients"></label>
       <button class="button button-primary button-small" data-action="new-project">+ New project</button></div>
       <section class="panel"><div class="panel-header"><div><h2 class="panel-title">Client relationships</h2><p class="panel-subtitle">${clients.length} active clients in your pipeline</p></div></div>
-      <div class="clients-grid">${clients.map((entry) => {
+      <div class="clients-grid" id="clients-grid">${clients.map((entry) => {
         const balance = entry.projects.reduce((sum, project) => sum + Number(project.amount), 0);
         const statuses = entry.projects.map((project) => projectStatus(project));
         const health = statuses.includes("Awaiting approval") ? "Needs follow-up" : statuses.includes("In progress") ? "Active" : "Ready";
@@ -723,7 +763,7 @@
       showToast("Solana tools did not load. Check your internet connection and reload the page.");
       return;
     }
-    if (!connectedWallet && !invoice.solPayment) {
+    if (!connectedWallet && (!invoice.solPayment || solPaymentRequestExpired(invoice.solPayment))) {
       showToast("Connect Phantom first to set your receiving wallet.");
       return;
     }
@@ -764,7 +804,12 @@
       const amount = document.getElementById("sol-payment-amount").value.trim();
       solToLamports(amount);
       const reference = window.solanaWeb3.Keypair.generate().publicKey.toString();
-      invoice.solPayment = { amount, recipient: connectedWallet, reference };
+      invoice.solPayment = {
+        amount,
+        recipient: connectedWallet,
+        reference,
+        expiresAt: new Date(Date.now() + SOL_PAYMENT_REQUEST_TTL_MS).toISOString()
+      };
       saveState();
       showSolPaymentRequest(invoice);
       view.querySelectorAll(`[data-sol-payment="${CSS.escape(invoice.id)}"]`).forEach((button) => {
@@ -785,49 +830,87 @@
     }
   });
 
+  document.getElementById("replace-sol-payment-request").addEventListener("click", () => {
+    const invoice = state.invoices.find((item) => item.id === currentSolInvoiceId);
+    if (!invoice || !invoice.solPayment || !solPaymentRequestExpired(invoice.solPayment) || !connectedWallet) {
+      showToast("Connect Phantom and wait for the current request to expire before replacing it.");
+      return;
+    }
+    document.getElementById("sol-payment-request").hidden = true;
+    document.getElementById("sol-payment-amount").disabled = false;
+    document.getElementById("create-sol-payment-request").hidden = false;
+    document.getElementById("sol-payment-amount").focus();
+  });
+
   document.getElementById("check-sol-payment").addEventListener("click", async (event) => {
     const button = event.currentTarget;
     const invoice = state.invoices.find((item) => item.id === currentSolInvoiceId);
-    if (!invoice || !invoice.solPayment) return;
+    if (!invoice || invoice.paymentStatus === "paid" || !invoice.solPayment || checkingSolPayment) return;
+    if (solPaymentRequestExpired(invoice.solPayment)) {
+      showSolPaymentRequest(invoice);
+      return;
+    }
+    const payment = { ...invoice.solPayment };
+    const invoiceId = invoice.id;
+    checkingSolPayment = true;
     button.disabled = true;
     document.getElementById("sol-payment-status").textContent = "Checking confirmed Devnet transactions…";
     try {
       const web3 = window.solanaWeb3;
       const connection = new web3.Connection(SOLANA_DEVNET_RPC, "confirmed");
-      const reference = new web3.PublicKey(invoice.solPayment.reference);
-      const expectedLamports = solToLamports(invoice.solPayment.amount);
+      const reference = new web3.PublicKey(payment.reference);
+      const expectedLamports = solToLamports(payment.amount);
       const signatures = await connection.getSignaturesForAddress(reference, { limit: 25 }, "confirmed");
       let matchingSignature = null;
       for (const entry of signatures) {
         if (entry.err) continue;
+        const signatureStatus = await connection.getSignatureStatuses([entry.signature], { searchTransactionHistory: true });
+        if (!isConfirmedSignatureStatus(signatureStatus.value[0])) continue;
         const transaction = await connection.getParsedTransaction(entry.signature, {
           commitment: "confirmed",
           maxSupportedTransactionVersion: 0
         });
         if (!transaction || !transaction.meta || transaction.meta.err) continue;
-        const instructions = transaction.transaction.message.instructions;
-        const matchedTransfer = instructions.some((instruction) => {
-          const info = instruction.parsed && instruction.parsed.info;
-          return instruction.program === "system"
-            && instruction.parsed && instruction.parsed.type === "transfer"
-            && info
-            && info.destination === invoice.solPayment.recipient
-            && BigInt(String(info.lamports)) === expectedLamports;
-        });
-        if (matchedTransfer) {
-          matchingSignature = entry.signature;
-          break;
-        }
+        if (!transaction.transaction.signatures.includes(entry.signature)
+          || !transactionIncludesReference(transaction, payment.reference)
+          || !transactionHasMatchingTransfer(transaction, payment, expectedLamports)) continue;
+        if (entry.confirmationStatus !== "confirmed" && entry.confirmationStatus !== "finalized") continue;
+        matchingSignature = entry.signature;
+        break;
       }
       if (!matchingSignature) {
         document.getElementById("sol-payment-status").textContent = "No matching confirmed payment found yet. The invoice remains outstanding.";
         return;
       }
-      invoice.paymentStatus = "paid";
-      invoice.verification = "solana_devnet";
-      invoice.solanaSignature = matchingSignature;
-      invoice.solanaConfirmedAt = new Date().toISOString();
-      addActivity("Devnet SOL payment confirmed for", invoice.id);
+      if (solPaymentRequestExpired(payment)) {
+        document.getElementById("sol-payment-status").textContent = "This payment request expired during verification. It was not accepted.";
+        return;
+      }
+      const finalStatus = await connection.getSignatureStatuses([matchingSignature], { searchTransactionHistory: true });
+      const finalTransaction = await connection.getParsedTransaction(matchingSignature, {
+        commitment: "confirmed",
+        maxSupportedTransactionVersion: 0
+      });
+      if (!isConfirmedSignatureStatus(finalStatus.value[0])
+        || !finalTransaction || !finalTransaction.meta || finalTransaction.meta.err
+        || !finalTransaction.transaction.signatures.includes(matchingSignature)
+        || !transactionIncludesReference(finalTransaction, payment.reference)
+        || !transactionHasMatchingTransfer(finalTransaction, payment, expectedLamports)) {
+        document.getElementById("sol-payment-status").textContent = "The transfer could not be reconfirmed at confirmed commitment. The invoice remains outstanding.";
+        return;
+      }
+      const currentInvoice = state.invoices.find((item) => item.id === invoiceId);
+      if (currentSolInvoiceId !== invoiceId || !currentInvoice || currentInvoice.paymentStatus === "paid" || !currentInvoice.solPayment
+        || currentInvoice.solPayment.reference !== payment.reference || solPaymentRequestExpired(currentInvoice.solPayment)
+        || signatureAlreadyApplied(state.invoices, invoiceId, matchingSignature)) {
+        document.getElementById("sol-payment-status").textContent = "The invoice or request changed during verification. No payment state was changed.";
+        return;
+      }
+      currentInvoice.paymentStatus = "paid";
+      currentInvoice.verification = "solana_devnet";
+      currentInvoice.solanaSignature = matchingSignature;
+      currentInvoice.solanaConfirmedAt = new Date().toISOString();
+      addActivity("Devnet SOL payment confirmed for", currentInvoice.id);
       saveState();
       closeSolPaymentDialog();
       render();
@@ -836,7 +919,9 @@
       console.error("Could not verify the Solana Devnet payment.", error);
       document.getElementById("sol-payment-status").textContent = `Could not check Devnet: ${error.message}`;
     } finally {
-      button.disabled = false;
+      checkingSolPayment = false;
+      const currentInvoice = state.invoices.find((item) => item.id === invoiceId);
+      button.disabled = !currentInvoice || !currentInvoice.solPayment || solPaymentRequestExpired(currentInvoice.solPayment);
     }
   });
 
